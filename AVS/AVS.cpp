@@ -114,6 +114,7 @@ namespace Plugin {
         if (_connectionId == connection->Id()) {
             ASSERT(_service != nullptr);
             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            TerminateConnection(_connectionId);
         }
     }
 
@@ -132,7 +133,11 @@ namespace Plugin {
                 message = _T("Failed to create the AVSClient - " + name);
             } else {
                 if (_AVSClient->Initialize(_service, configStr) != true) {
+
                     _AVSClient->Release();
+                    _AVSClient = nullptr;
+
+                    TerminateConnection(_connectionId);
                     message = _T("Failed to initialize the AVSClient - " + name);
                 }
             }

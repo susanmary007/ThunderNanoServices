@@ -29,6 +29,7 @@
 #include <AVSCommon/Utils/LibcurlUtils/HTTPContentFetcherFactory.h>
 #include <AVSCommon/Utils/LibcurlUtils/HttpPut.h>
 #include <AVSCommon/Utils/LibcurlUtils/LibcurlHTTP2ConnectionFactory.h>
+#include <AVSCommon/Utils/Logger/ConsoleLogger.h>
 #include <AVSCommon/Utils/Logger/LoggerSinkManager.h>
 #include <AVSCommon/Utils/Network/InternetConnectionMonitor.h>
 #include <Alerts/Storage/SQLiteAlertStorage.h>
@@ -39,7 +40,6 @@
 #include <Notifications/SQLiteNotificationsStorage.h>
 #include <SQLiteStorage/SQLiteMiscStorage.h>
 #include <Settings/Storage/SQLiteDeviceSettingStorage.h>
-
 #include <AVS/SampleApp/LocaleAssetsManager.h>
 #include <AVS/SampleApp/PortAudioMicrophoneWrapper.h>
 
@@ -130,6 +130,7 @@ namespace Plugin {
             }
         }
 #endif
+
         if ((status == true) && (alexaClientSDK::avsCommon::avs::initialization::AlexaClientSDKInit::initialize(configJsonStreams) == false)) {
             TRACE(AVSClient, (_T("Failed to initialize SDK!")));
             return false;
@@ -339,6 +340,7 @@ namespace Plugin {
             return false;
         }
 
+
         // MAIN CLIENT
         std::shared_ptr<alexaClientSDK::defaultClient::DefaultClient> client = alexaClientSDK::defaultClient::DefaultClient::create(
             deviceInfo,
@@ -464,8 +466,11 @@ namespace Plugin {
 
             m_thunderVoiceHandler = ThunderVoiceHandler<alexaClientSDK::sampleApp::InteractionManager>::create(sharedDataStream, _service, audiosource, aspInputInteractionHandler, compatibleAudioFormat);
             aspInput = m_thunderVoiceHandler;
-            aspInput->startStreamingMicrophoneData();
+            if (aspInput) {
+                aspInput->startStreamingMicrophoneData();
+            }
         }
+
         if (!aspInput) {
             TRACE(AVSClient, (_T("Failed to create aspInput")));
             return false;
@@ -491,6 +496,10 @@ namespace Plugin {
         // Interaction Manager
         m_interactionManager = std::make_shared<alexaClientSDK::sampleApp::InteractionManager>(client, aspInput, userInterfaceManager, holdToTalkAudioProvider, tapToTalkAudioProvider, m_guiRenderer, wakeWordAudioProvider);
 
+        if (!m_interactionManager) {
+            TRACE(AVSClient, (_T("Failed to create InteractionManager")));
+            return false;
+        }
         client->addAlexaDialogStateObserver(m_interactionManager);
 
         if (audiosource != PORTAUDIO_CALLSIGN) {
@@ -550,6 +559,11 @@ namespace Plugin {
         }
 
         return status;
+    }
+
+    void AVSDevice::ResetSDKLogger()
+    {
+        alexaClientSDK::avsCommon::utils::logger::LoggerSinkManager::instance().initialize(alexaClientSDK::avsCommon::utils::logger::ConsoleLogger::instance());
     }
 
     bool AVSDevice::JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile)

@@ -105,10 +105,10 @@ namespace Plugin {
                 StateChange(callsign, service);
             }
 
-	    void Unavailable(const string& callsign, PluginHost::IShell* service) override
-	    {
+            void Unavailable(const string& callsign, PluginHost::IShell* service) override
+            {
                 StateChange(callsign, service);
-	    }
+            }
 
         private:
             void StateChange(const string& callsign, WPEFramework::PluginHost::IShell* service)
@@ -230,6 +230,17 @@ namespace Plugin {
         void Activated(RPC::IRemoteConnection* connection);
         void Deactivated(RPC::IRemoteConnection* connection);
         const string CreateInstance(const string& name, const Config& config);
+        inline void TerminateConnection(uint32_t connectionId)
+        {
+            if (connectionId != 0) {
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+        }
+    private:
 
         Exchange::IAVSClient* _AVSClient;
         Exchange::IAVSController* _controller;
