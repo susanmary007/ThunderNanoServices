@@ -32,6 +32,7 @@ namespace Plugin {
         : _skipURL(0)
         , _defaultCallsign(nullptr)
         , _activeCallsign(nullptr)
+        , _activatingCallsign(nullptr)
         , _sink(this)
         , _service(nullptr)
         , _job(Core::ProxyType<Core::IDispatchType<void>>(Core::ProxyType<Job>::Create(this)))
@@ -233,8 +234,10 @@ namespace Plugin {
 
                 result = Core::ERROR_NONE;
 
+                ASSERT((_activeCallsign == nullptr) || (_activatingCallsign == nullptr));
                 if ((&(activate->second) != _activeCallsign) || (activate->second.IsActive() == false)) {
 
+                    _activatingCallsign = nullptr;
                     if ((_activeCallsign != nullptr) && (&(activate->second) != _activeCallsign)) {
 
                         if ((result = _activeCallsign->Deactivate()) == Core::ERROR_NONE) {
@@ -276,6 +279,8 @@ namespace Plugin {
             if (deactivate != _switches.end()) {
 
                 result = Core::ERROR_NONE;
+                ASSERT((_activeCallsign == nullptr) || (_activatingCallsign == nullptr));
+
                 if (deactivate->second.IsActive() == true) {
 
                     // Check if it is not the currently active call sign which is also the default one..
@@ -293,6 +298,10 @@ namespace Plugin {
                             Activated(*_defaultCallsign);
                         }
                     }
+                } else if ((_activatingCallsign != nullptr) &&
+                           (&(deactivate->second) == _activatingCallsign)) {
+                    // Not yet activated, hence just clear it
+                    _activatingCallsign = nullptr;
                 }
             }
 
@@ -326,8 +335,18 @@ namespace Plugin {
             }
 
             _state = IDLE;
-            if ((_defaultCallsign != nullptr) && ((result = _defaultCallsign->Activate()) == Core::ERROR_NONE)) {
-                Activated(*_defaultCallsign);
+            if (_defaultCallsign != nullptr) {
+                result = _defaultCallsign->Activate();
+                if (result == Core::ERROR_NONE) {
+
+                    Activated(*_defaultCallsign);
+                } else if (result == Core::ERROR_PENDING_CONDITIONS) {
+                    // During initialization time, some precondition will not
+                    // be met due to activation order, hence plugin has to wait to
+                    // meet all preconditions. So keep this in the
+                    // pending list to handle once it get activated.
+                    _activatingCallsign = _defaultCallsign;
+                }
             }
         }
 
@@ -352,11 +371,14 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        ASSERT((_activeCallsign == nullptr) || (_activatingCallsign == nullptr));
         if (_activeCallsign != nullptr) {
             if ((result = _activeCallsign->Deactivate()) == Core::ERROR_NONE) {
                 _activeCallsign = nullptr;
             }
         }
+        _activatingCallsign = nullptr;
 
         return(result);
     }
@@ -412,6 +434,14 @@ namespace Plugin {
 
         if (index != _switches.end()) {
             index->second.Register(&_sink);
+
+            // Handle delayed activation of the requested plugin
+            if ((_activatingCallsign != nullptr) && (_activatingCallsign->Callsign() == callsign)) {
+                if (index->second.Resume() == Core::ERROR_NONE) {
+                    Activated(*_activatingCallsign);
+                }
+                _activatingCallsign = nullptr;
+            }
         }
         _adminLock.Unlock();
     }
@@ -424,7 +454,7 @@ namespace Plugin {
         if (index != _switches.end()) {
 
             index->second.Unregister(&_sink);
-            if ((_state == IDLE) && (&(index->second) == _activeCallsign)) {
+            if ((&(index->second) == _activeCallsign) && (_state == IDLE)) {
                 _state = INPROGRESS;
                 PluginHost::WorkerPool::Instance().Submit(_job);
             }

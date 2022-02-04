@@ -175,7 +175,8 @@ namespace Plugin {
                     PluginHost::IStateControl* control = _shell->QueryInterface<PluginHost::IStateControl>();
 
                     if (control != nullptr) {
-                        running = (control->State() == PluginHost::IStateControl::RESUMED);
+                        running = ((control->State() == PluginHost::IStateControl::RESUMED) ||
+                                   (control->State() == PluginHost::IStateControl::UNINITIALIZED));
                         control->Release();
                     }
                 }
@@ -198,7 +199,17 @@ namespace Plugin {
                     TRACE(Switching, (_T("Activated plugin [%s], result [%d]"), _shell->Callsign().c_str(), result));
                 }
 
-                if ((result == Core::ERROR_NONE) && (_shell->State() == PluginHost::IShell::ACTIVATED)) {
+                if (result == Core::ERROR_NONE) {
+                    result = Resume();
+                }
+
+                return (result);
+            }
+
+            uint32_t Resume() {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                if (_shell->State() == PluginHost::IShell::ACTIVATED) {
                     PluginHost::IStateControl* control(_shell->QueryInterface<PluginHost::IStateControl>());
 
                     if (control != nullptr) {
@@ -207,10 +218,10 @@ namespace Plugin {
 
                             result = control->Request(PluginHost::IStateControl::RESUME);
                             TRACE(Switching, (_T("Resumed plugin [%s], result [%d]"), _shell->Callsign().c_str(), result));
+                        } else if (control->State() == PluginHost::IStateControl::RESUMED) {
+                            result = Core::ERROR_NONE;
                         }
-
                         control->Release();
-
                     }
                 }
 
@@ -457,6 +468,7 @@ namespace Plugin {
         uint8_t _skipURL;
         Entry* _defaultCallsign;
         Entry* _activeCallsign;
+        Entry* _activatingCallsign;
         std::map<string, Entry> _switches;
         std::list<Exchange::ISwitchBoard::INotification*> _notificationClients;
         Core::Sink<Notification> _sink;
