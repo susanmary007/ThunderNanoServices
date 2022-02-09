@@ -35,7 +35,7 @@ namespace Plugin {
         ~AVSSDK() = default;
 
         explicit AVSSDK(const string& text)
-            : _text(WPEFramework::Core::ToString(text))
+            : _text(Core::ToString(text))
         {
         }
 
@@ -72,7 +72,7 @@ namespace Plugin {
         ~AVSClient() = default;
 
         explicit AVSClient(const string& text)
-            : _text(WPEFramework::Core::ToString(text))
+            : _text(Core::ToString(text))
         {
         }
 

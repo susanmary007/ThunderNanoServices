@@ -22,10 +22,14 @@
 #include "ThunderInputManager.h"
 #include "ThunderVoiceHandler.h"
 
-#include <interfaces/IAVSClient.h>
 
-#include <AVS/KWD/AbstractKeywordDetector.h>
-#include <SampleApp/SampleApplication.h>
+#if defined(KWD_PRYON)
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
+#include <acsdkKWDProvider/KWDProvider/KeywordDetectorProvider.h>
+#endif
+
+#include <AVS/SampleApp/SampleApplication.h>
+#include <interfaces/IAVSClient.h>
 
 #include <vector>
 
@@ -33,8 +37,11 @@ namespace WPEFramework {
 namespace Plugin {
 
     class AVSDevice
-        : public WPEFramework::Exchange::IAVSClient,
+        : public Exchange::IAVSClient,
           private alexaClientSDK::sampleApp::SampleApplication {
+    private:
+        using MediaPlayerInterface = alexaClientSDK::avsCommon::utils::mediaPlayer::MediaPlayerInterface;
+
     public:
         AVSDevice()
             : _service(nullptr)
@@ -45,40 +52,41 @@ namespace Plugin {
 
         AVSDevice(const AVSDevice&) = delete;
         AVSDevice& operator=(const AVSDevice&) = delete;
-        ~AVSDevice() {
-            ResetSDKLogger();
-        }
+        virtual ~AVSDevice() = default;
 
     private:
-        class Config : public WPEFramework::Core::JSON::Container {
+        class Config : public Core::JSON::Container {
         public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
         public:
             Config()
-                : WPEFramework::Core::JSON::Container()
+                : Core::JSON::Container()
                 , Audiosource()
                 , AlexaClientConfig()
                 , LogLevel()
                 , KWDModelsPath()
                 , EnableKWD()
+                , EnableDiagnostic()
             {
                 Add(_T("audiosource"), &Audiosource);
                 Add(_T("alexaclientconfig"), &AlexaClientConfig);
                 Add(_T("loglevel"), &LogLevel);
                 Add(_T("kwdmodelspath"), &KWDModelsPath);
                 Add(_T("enablekwd"), &EnableKWD);
+                Add(_T("enablediagnostic"), &EnableDiagnostic);
             }
 
             ~Config() = default;
 
         public:
-            WPEFramework::Core::JSON::String Audiosource;
-            WPEFramework::Core::JSON::String AlexaClientConfig;
-            WPEFramework::Core::JSON::String LogLevel;
-            WPEFramework::Core::JSON::String KWDModelsPath;
-            WPEFramework::Core::JSON::Boolean EnableKWD;
+            Core::JSON::String Audiosource;
+            Core::JSON::String AlexaClientConfig;
+            Core::JSON::String LogLevel;
+            Core::JSON::String KWDModelsPath;
+            Core::JSON::Boolean EnableKWD;
+            Core::JSON::Boolean EnableDiagnostic;
         };
 
     public:
@@ -88,21 +96,20 @@ namespace Plugin {
         void StateChange(PluginHost::IShell* audioSource) override;
 
         BEGIN_INTERFACE_MAP(AVSDevice)
-        INTERFACE_ENTRY(WPEFramework::Exchange::IAVSClient)
+        INTERFACE_ENTRY(Exchange::IAVSClient)
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder);
+        bool Init(const std::string& audiosource, const bool enableDiagnostic, const bool enableKWD, const std::string& pathToInputFolder, std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
-        bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
-        void ResetSDKLogger();
+        bool JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> streams, const std::string& configFile);
 
     private:
-        WPEFramework::PluginHost::IShell* _service;
+        PluginHost::IShell* _service;
         std::shared_ptr<ThunderInputManager> m_thunderInputManager;
         std::shared_ptr<ThunderVoiceHandler<alexaClientSDK::sampleApp::InteractionManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
-        std::unique_ptr<alexaClientSDK::kwd::AbstractKeywordDetector> m_keywordDetector;
+        std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;
 #endif
     };
 

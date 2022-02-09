@@ -110,7 +110,7 @@ namespace Plugin {
     template <typename MANAGER>
     class ThunderVoiceHandler : public alexaClientSDK::applicationUtilities::resources::audio::MicrophoneInterface {
     public:
-        static std::unique_ptr<ThunderVoiceHandler> create(std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> stream, WPEFramework::PluginHost::IShell* service, const string& callsign, std::shared_ptr<InteractionHandler<MANAGER>> interactionHandler, alexaClientSDK::avsCommon::utils::AudioFormat audioFormat)
+        static std::unique_ptr<ThunderVoiceHandler> create(std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> stream, PluginHost::IShell* service, const string& callsign, std::shared_ptr<InteractionHandler<MANAGER>> interactionHandler, alexaClientSDK::avsCommon::utils::AudioFormat audioFormat)
         {
             if (!stream) {
                 TRACE_GLOBAL(AVSClient, (_T("Invalid stream")));
@@ -154,9 +154,9 @@ namespace Plugin {
             return true;
         }
 
-        void stateChange(WPEFramework::PluginHost::IShell* audiosource)
+        void stateChange(PluginHost::IShell* audiosource)
         {
-            if (audiosource->State() == WPEFramework::PluginHost::IShell::ACTIVATED) {
+            if (audiosource->State() == PluginHost::IShell::ACTIVATED) {
                 bool status = Initialize();
                 if (!status) {
                     TRACE(AVSClient, (_T("Failed to initialize ThunderVoiceHandlerWraper")));
@@ -164,7 +164,7 @@ namespace Plugin {
                 }
             }
 
-            if (audiosource->State() == WPEFramework::PluginHost::IShell::DEACTIVATED) {
+            if (audiosource->State() == PluginHost::IShell::DEACTIVATED) {
                 bool status = Deinitialize();
                 if (!status) {
                     TRACE(AVSClient, (_T("Failed to deinitialize ThunderVoiceHandlerWraper")));
@@ -181,14 +181,14 @@ namespace Plugin {
         }
 
     private:
-        ThunderVoiceHandler(std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> stream, WPEFramework::PluginHost::IShell* service, const string& callsign, std::shared_ptr<InteractionHandler<MANAGER>> interactionHandler)
+        ThunderVoiceHandler(std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> stream, PluginHost::IShell* service, const string& callsign, std::shared_ptr<InteractionHandler<MANAGER>> interactionHandler)
             : m_audioInputStream{ stream }
             , m_callsign{ callsign }
             , m_service{ service }
             , m_voiceProducer{ nullptr }
             , m_isInitialized{ false }
             , m_interactionHandler{ interactionHandler }
-            , m_voiceHandler{ WPEFramework::Core::ProxyType<VoiceHandler>::Create(this) }
+            , m_voiceHandler{ Core::ProxyType<VoiceHandler>::Create(this) }
         {
             m_service->AddRef();
         }
@@ -212,7 +212,7 @@ namespace Plugin {
             }
 
             if (error != true) {
-                m_voiceProducer = m_service->QueryInterfaceByCallsign<WPEFramework::Exchange::IVoiceProducer>(m_callsign);
+                m_voiceProducer = m_service->QueryInterfaceByCallsign<Exchange::IVoiceProducer>(m_callsign);
                 if (m_voiceProducer == nullptr) {
                     TRACE(AVSClient, (_T("Failed to obtain VoiceProducer interface!")));
                     error = true;
@@ -244,9 +244,14 @@ namespace Plugin {
             return true;
         }
 
+        bool isStreaming() override
+        {
+            return m_voiceHandler->IsStreaming();
+        }
+
     private:
         ///  Responsible for getting audio data from Thunder
-        class VoiceHandler : public WPEFramework::Exchange::IVoiceHandler {
+        class VoiceHandler : public Exchange::IVoiceHandler {
         public:
             VoiceHandler(ThunderVoiceHandler* parent)
                 : m_profile{ nullptr }
@@ -257,7 +262,7 @@ namespace Plugin {
 
             // A callback method that is invoked with each start of the audio transmission.
             // The profile should stay the same between Start() and Stop().
-            void Start(const WPEFramework::Exchange::IVoiceProducer::IProfile* profile) override
+            void Start(const Exchange::IVoiceProducer::IProfile* profile) override
             {
                 TRACE_L1(_T("ThunderVoiceHandler::VoiceHandler::Start()"));
 
@@ -307,16 +312,17 @@ namespace Plugin {
                     }
                 }
             }
-	    bool IsStreaming() {
-		return (m_isStarted);
-	    }
+            bool IsStreaming()
+            {
+                return (m_isStarted);
+            }
 
             BEGIN_INTERFACE_MAP(VoiceHandler)
-            INTERFACE_ENTRY(WPEFramework::Exchange::IVoiceHandler)
+            INTERFACE_ENTRY(Exchange::IVoiceHandler)
             END_INTERFACE_MAP
 
         private:
-            const WPEFramework::Exchange::IVoiceProducer::IProfile* m_profile;
+            const Exchange::IVoiceProducer::IProfile* m_profile;
             ThunderVoiceHandler* m_parent;
             bool m_isStarted;
         };
@@ -324,13 +330,13 @@ namespace Plugin {
     private:
         const std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> m_audioInputStream;
         string m_callsign;
-        WPEFramework::PluginHost::IShell* m_service;
-        WPEFramework::Exchange::IVoiceProducer* m_voiceProducer;
+        PluginHost::IShell* m_service;
+        Exchange::IVoiceProducer* m_voiceProducer;
         bool m_isInitialized;
         std::shared_ptr<InteractionHandler<MANAGER>> m_interactionHandler;
         std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream::Writer> m_writer;
 
-        WPEFramework::Core::ProxyType<VoiceHandler> m_voiceHandler;
+        Core::ProxyType<VoiceHandler> m_voiceHandler;
 
         std::mutex m_mutex;
     };

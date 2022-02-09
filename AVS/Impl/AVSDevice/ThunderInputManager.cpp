@@ -23,7 +23,7 @@ namespace WPEFramework {
 namespace Plugin {
 
     using namespace alexaClientSDK::avsCommon::sdkInterfaces;
-    using namespace WPEFramework::Exchange;
+    using namespace Exchange;
 
     std::unique_ptr<ThunderInputManager> ThunderInputManager::create(std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> interactionManager)
     {
@@ -37,7 +37,8 @@ namespace Plugin {
     ThunderInputManager::ThunderInputManager(std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> interactionManager)
         : m_limitedInteraction{ false }
         , m_interactionManager{ interactionManager }
-        , m_controller{ WPEFramework::Core::ProxyType<AVSController>::Create(this) }
+        , m_controller{ Core::ProxyType<AVSController>::Create(this) }
+        , m_isStreaming(false)
     {
     }
 
@@ -120,31 +121,31 @@ namespace Plugin {
     uint32_t ThunderInputManager::AVSController::Mute(const bool mute)
     {
         if (m_parent.m_limitedInteraction) {
-            return static_cast<uint32_t>(WPEFramework::Core::ERROR_GENERAL);
+            return static_cast<uint32_t>(Core::ERROR_GENERAL);
         }
 
         if (!m_parent.m_interactionManager) {
-            return static_cast<uint32_t>(WPEFramework::Core::ERROR_UNAVAILABLE);
+            return static_cast<uint32_t>(Core::ERROR_UNAVAILABLE);
         }
 
-        m_parent.m_interactionManager->setMute(SpeakerInterface::Type::AVS_SPEAKER_VOLUME, mute);
-        m_parent.m_interactionManager->setMute(SpeakerInterface::Type::AVS_ALERTS_VOLUME, mute);
+        m_parent.m_interactionManager->setMute(ChannelVolumeInterface::Type::AVS_SPEAKER_VOLUME, mute);
+        m_parent.m_interactionManager->setMute(ChannelVolumeInterface::Type::AVS_ALERTS_VOLUME, mute);
 
-        return static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE);
+        return static_cast<uint32_t>(Core::ERROR_NONE);
     }
 
     uint32_t ThunderInputManager::AVSController::Record(const bool start VARIABLE_IS_NOT_USED)
     {
         if (m_parent.m_limitedInteraction) {
-            return static_cast<uint32_t>(WPEFramework::Core::ERROR_GENERAL);
+            return static_cast<uint32_t>(Core::ERROR_GENERAL);
         }
 
         m_parent.m_interactionManager->tap();
 
-        return static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE);
+        return static_cast<uint32_t>(Core::ERROR_NONE);
     }
 
-    WPEFramework::Exchange::IAVSController* ThunderInputManager::Controller()
+    Exchange::IAVSController* ThunderInputManager::Controller()
     {
         return (&(*m_controller));
     }
@@ -160,10 +161,13 @@ namespace Plugin {
     }
 
     void ThunderInputManager::onCapabilitiesStateChange(
-        CapabilitiesObserverInterface::State newState,
-        CapabilitiesObserverInterface::Error newError VARIABLE_IS_NOT_USED)
+        CapabilitiesDelegateObserverInterface::State newState,
+        CapabilitiesDelegateObserverInterface::Error newError VARIABLE_IS_NOT_USED,
+        const std::vector<std::string>& addedOrUpdatedEndpointIds VARIABLE_IS_NOT_USED,
+        const std::vector<std::string>& deletedEndpointIds VARIABLE_IS_NOT_USED)
+
     {
-        m_limitedInteraction = m_limitedInteraction || (newState == CapabilitiesObserverInterface::State::FATAL_ERROR);
+        m_limitedInteraction = m_limitedInteraction || (newState == CapabilitiesDelegateObserverInterface::State::FATAL_ERROR);
     }
 
 } // namespace Plugin

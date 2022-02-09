@@ -21,7 +21,7 @@
 
 #include "TraceCategories.h"
 
-#include <SampleApp/InteractionManager.h>
+#include <AVS/SampleApp/InteractionManager.h>
 #include <interfaces/IAVSClient.h>
 
 #include <atomic>
@@ -32,13 +32,13 @@ namespace Plugin {
     /// Observes user input from the console and notifies the interaction manager of the user's intentions.
     class ThunderInputManager
         : public alexaClientSDK::avsCommon::sdkInterfaces::AuthObserverInterface,
-          public alexaClientSDK::avsCommon::sdkInterfaces::CapabilitiesObserverInterface,
+          public alexaClientSDK::avsCommon::sdkInterfaces::CapabilitiesDelegateObserverInterface,
           public alexaClientSDK::registrationManager::RegistrationObserverInterface,
           public alexaClientSDK::avsCommon::sdkInterfaces::DialogUXStateObserverInterface {
     public:
         static std::unique_ptr<ThunderInputManager> create(std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> interactionManager);
 
-        class AVSController : public WPEFramework::Exchange::IAVSController {
+        class AVSController : public Exchange::IAVSController {
         public:
             AVSController(const AVSController&) = delete;
             AVSController& operator=(const AVSController&) = delete;
@@ -47,38 +47,44 @@ namespace Plugin {
 
             void NotifyDialogUXStateChanged(DialogUXState newState);
 
-            // WPEFramework::Exchange::IAVSController methods
+            // Exchange::IAVSController methods
             void Register(INotification* sink) override;
             void Unregister(const INotification* sink) override;
             uint32_t Mute(const bool mute) override;
             uint32_t Record(const bool start) override;
 
             BEGIN_INTERFACE_MAP(AVSController)
-            INTERFACE_ENTRY(WPEFramework::Exchange::IAVSController)
+            INTERFACE_ENTRY(Exchange::IAVSController)
             END_INTERFACE_MAP
 
         private:
             ThunderInputManager& m_parent;
-            std::list<WPEFramework::Exchange::IAVSController::INotification*> m_notifications;
+            std::list<Exchange::IAVSController::INotification*> m_notifications;
         };
 
         void onLogout() override;
         void onDialogUXStateChanged(DialogUXState newState) override;
-
-        WPEFramework::Exchange::IAVSController* Controller();
+        bool isStreaming()
+        {
+            return m_isStreaming;
+        }
+        Exchange::IAVSController* Controller();
 
     private:
         ThunderInputManager(std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> interactionManager);
 
         void onAuthStateChange(AuthObserverInterface::State newState, AuthObserverInterface::Error newError) override;
         void onCapabilitiesStateChange(
-                CapabilitiesObserverInterface::State newState,
-                CapabilitiesObserverInterface::Error newError) override;
+                CapabilitiesDelegateObserverInterface::State newState,
+                CapabilitiesDelegateObserverInterface::Error newError,
+                const std::vector<std::string>& addedOrUpdatedEndpointIds,
+                const std::vector<std::string>& deletedEndpointIds) override;
 
 
         std::atomic_bool m_limitedInteraction;
         std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> m_interactionManager;
-        WPEFramework::Core::ProxyType<AVSController> m_controller;
+        Core::ProxyType<AVSController> m_controller;
+        bool m_isStreaming;
     };
 
 } // namespace Plugin

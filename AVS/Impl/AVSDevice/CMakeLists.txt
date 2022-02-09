@@ -30,10 +30,11 @@ list(APPEND WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES
     ../Module.cpp
     ../ThunderLogger.cpp
 )
-
+set_source_files_properties(AVSDevice.cpp  PROPERTIES COMPILE_FLAGS "-fexceptions")
 if(PLUGIN_AVS_ENABLE_KWD_SUPPORT)
     list(APPEND WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES ../PryonKeywordDetector.cpp)
     add_definitions(-DKWD_PRYON)
+    add_definitions(-DKWD)
 endif()
 
 add_library(${MODULE_NAME} ${WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES})
@@ -45,8 +46,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_include_directories(${MODULE_NAME}
     PUBLIC
         ../
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${ALEXA_CLIENT_SDK_INCLUDES})
+    )
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
@@ -54,12 +54,12 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${ALEXA_CLIENT_SDK_LIBRARIES})
+        AlexaClientSDK::AlexaClientSDK)
 
 if(PLUGIN_AVS_ENABLE_KWD_SUPPORT)
-    if(PRYON_LITE_FOUND)
+    if(PryonLite_FOUND)
         target_include_directories(${MODULE_NAME} PUBLIC ${PRYON_LITE_INCLUDES})
-        target_link_libraries(${MODULE_NAME} PRIVATE ${PRYON_LITE_LIBRARIES})
+        target_link_libraries(${MODULE_NAME} PRIVATE PryonLite::PryonLite)
     else()
         message(FATAL_ERROR "Missing pryon_lite library!")
     endif()

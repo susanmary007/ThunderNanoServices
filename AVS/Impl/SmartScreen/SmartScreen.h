@@ -19,21 +19,21 @@
 
 #pragma once
 
-#include "ThunderVoiceHandler.h"
-
-#include <WPEFramework/interfaces/IAVSClient.h>
-
-#include <AVS/KWD/AbstractKeywordDetector.h>
-
-#include <SmartScreen/SampleApp/SampleApplication.h>
-
 #include <vector>
+#if defined(KWD_PRYON)
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
+#endif
+#include <SampleApp/SampleApplication.h>
+
+#include "ThunderVoiceHandler.h"
+#include <interfaces/IAVSClient.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
 
     class SmartScreen
-        : public WPEFramework::Exchange::IAVSClient,
+        : public Exchange::IAVSClient,
           private alexaSmartScreenSDK::sampleApp::SampleApplication {
     public:
         SmartScreen()
@@ -47,14 +47,14 @@ namespace Plugin {
         ~SmartScreen() {}
 
     private:
-        class Config : public WPEFramework::Core::JSON::Container {
+        class Config : public Core::JSON::Container {
         public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
         public:
             Config()
-                : WPEFramework::Core::JSON::Container()
+                : Core::JSON::Container()
                 , Audiosource()
                 , AlexaClientConfig()
                 , SmartScreenConfig()
@@ -73,12 +73,12 @@ namespace Plugin {
             ~Config() = default;
 
         public:
-            WPEFramework::Core::JSON::String Audiosource;
-            WPEFramework::Core::JSON::String AlexaClientConfig;
-            WPEFramework::Core::JSON::String SmartScreenConfig;
-            WPEFramework::Core::JSON::String LogLevel;
-            WPEFramework::Core::JSON::String KWDModelsPath;
-            WPEFramework::Core::JSON::Boolean EnableKWD;
+            Core::JSON::String Audiosource;
+            Core::JSON::String AlexaClientConfig;
+            Core::JSON::String SmartScreenConfig;
+            Core::JSON::String LogLevel;
+            Core::JSON::String KWDModelsPath;
+            Core::JSON::Boolean EnableKWD;
         };
 
     public:
@@ -88,7 +88,7 @@ namespace Plugin {
         void StateChange(PluginHost::IShell* audioSource) override;
 
         BEGIN_INTERFACE_MAP(SmartScreen)
-        INTERFACE_ENTRY(WPEFramework::Exchange::IAVSClient)
+        INTERFACE_ENTRY(Exchange::IAVSClient)
         END_INTERFACE_MAP
 
     private:
@@ -97,10 +97,10 @@ namespace Plugin {
         bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
 
     private:
-        WPEFramework::PluginHost::IShell* _service;
+        PluginHost::IShell* _service;
         std::shared_ptr<ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
-        std::unique_ptr<alexaClientSDK::kwd::AbstractKeywordDetector> m_keywordDetector;
+        std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;
 #endif
     };
 

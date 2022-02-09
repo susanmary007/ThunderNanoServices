@@ -22,16 +22,23 @@
 
 find_path(ASIO_INCLUDES asio.hpp)
 
-find_package_handle_standard_args(ASIO DEFAULT_MSG
+find_package_handle_standard_args(Asio DEFAULT_MSG
         ASIO_INCLUDES)
 mark_as_advanced(ASIO_INCLUDES)
 
-if(ASIO_FOUND)
+if(Asio_FOUND)
     if(NOT TARGET Asio::Asio)
         add_library(Asio::Asio SHARED IMPORTED)
         set_target_properties(Asio::Asio
             PROPERTIES
                 INTERFACE_INCLUDE_DIRECTORIES "${ASIO_INCLUDES}"
         )
+
+    endif()
+else()
+    if(Asio_FIND_REQUIRED)
+        message(FATAL_ERROR "Could NOT find Asio")
+    elseif(NOT Asio_FIND_QUIETLY)
+        message(STATUS "Could NOT find Asio")
     endif()
 endif()
